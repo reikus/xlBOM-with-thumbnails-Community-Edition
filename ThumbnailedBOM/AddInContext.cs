@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace ThumbnailedBOM
 {
@@ -15,6 +16,8 @@ namespace ThumbnailedBOM
     [Guid("C672CD28-517F-4426-891C-EC8D8EE51EA2")]
     public class AddInContext : SwAddin
     {
+        internal static AppWindow ApplicationWindow { get; set; }
+
         private List<int> CommandIDs = new List<int>();
 
         /// <summary>
@@ -48,20 +51,10 @@ namespace ThumbnailedBOM
         {
 
 
-
-            //var ret = SOLIDWORKS.AddMenuPopupItem3(
-            //  (int)swDocumentTypes_e.swDocDRAWING,
-            //  SessionCookie,
-            //  (int)swSelectType_e.swSelBOMFEATURES,
-            //  "Export to Excel (with thumbnails)",
-            //  "OpenShell",
-            //  "",
-            //  "Export to Excel (with thumbnails)",
-            //  ""
-            //  );
+ 
              
             var ret = SOLIDWORKS.AddMenuPopupItem3(
-              (int)swDocumentTypes_e.swDocDRAWING,
+              (int)(swDocumentTypes_e.swDocDRAWING | swDocumentTypes_e.swDocASSEMBLY),
               SessionCookie,
               (int)swSelectType_e.swSelANNOTATIONTABLES,
               "Export to Excel (with thumbnails)",
@@ -76,17 +69,32 @@ namespace ThumbnailedBOM
 
 
         }
-
+        
+        internal static Application Application = null;
         public void OpenShell()
         {
-            var application = Application.Current;
-            if (application == null)
+            if (Application.Current != Application)
             {
-                application = new Application();
-                application.Run();
+                string name = string.Empty;
+                if (Application.Current != null)
+                    if (Application.Current.MainWindow != null)
+                        name = $" [{Application.Current.MainWindow.Title}]";
+                SOLIDWORKS.SendMsgToUser($"Existing WPF application in SOLIDWORKS domain{name}. {AddInName} attempted to launch but failed. It is very likely that an existing add-in is causing this error. Please disable add-in and restart SOLIDWORKS.");
+                return;
             }
-            else
-                application.Run();
+
+                if (Application == null)
+                { 
+                    Application = new Application
+                    {
+                        ShutdownMode = ShutdownMode.OnExplicitShutdown
+                    };
+
+                }
+                 else
+                {
+                    Application.Restart();
+                }
 
         }
 
@@ -102,6 +110,9 @@ namespace ThumbnailedBOM
                                  );
                 
             }
+
+            // shut down application
+            Application.Shutdown();
 
         }
 

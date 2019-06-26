@@ -5,7 +5,6 @@ using Prism.Mvvm;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -16,14 +15,24 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Forms;
 
+
 namespace ThumbnailedBOM.ViewModels
 {
     public class MainViewModel : BindableBase
     {
+
+      
         Window window;
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        CancellationToken token = default(CancellationToken);
         private string message = "Set the save location to start...";
+
+        private Font font;
+        public Font Font
+        {
+            get { return font; }
+            set { SetProperty(ref font, value); }
+        }
+
         public string Message
         {
            
@@ -44,6 +53,28 @@ namespace ThumbnailedBOM.ViewModels
         {
             get { return isIdle; }
             set { SetProperty(ref isIdle, value); }
+        }
+
+        private DelegateCommand about;
+        public DelegateCommand About =>
+            about ?? (about = new DelegateCommand(ExecuteAbout, CanExecuteAbout));
+
+        void ExecuteAbout()
+        {
+            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine("Exports SOLIDWORKS BOM to excel with thumbnails. Limitations:");
+            stringBuilder.AppendLine("- Works best on parts only BOM.");
+            stringBuilder.AppendLine("- Thumbnails are not necessarily latest.");
+            stringBuilder.AppendLine("- Use default excel font / Does not propogate SOLIDWORKS BOM style.");
+            stringBuilder.AppendLine("- Thumbnails are dimensioned at 30*30.");
+            stringBuilder.AppendLine("Program licensed under MIT License.");
+            stringBuilder.AppendLine("Developed by Amen Jlili - https://github.com/jliliamen");
+            System.Windows.Forms.MessageBox.Show(stringBuilder.ToString(), AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        }
+
+        bool CanExecuteAbout()
+        {
+            return IsIdle;
         }
 
         private DelegateCommand donate;
@@ -72,6 +103,7 @@ namespace ThumbnailedBOM.ViewModels
             SetSaveLocation.ObservesProperty(() => this.IsIdle);
             Donate.ObservesProperty(() => this.IsIdle);
             Cancel.ObservesProperty(() => this.IsIdle);
+            About.ObservesProperty(() => this.IsIdle);
         }
 
         #region Execute and CanExecute
@@ -101,7 +133,7 @@ namespace ThumbnailedBOM.ViewModels
         }
         void ExecuteCancel()
         {
-            cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.Cancel();
             this.Message = "Cancel request received. Please wait..."; 
             
         }
@@ -113,7 +145,7 @@ namespace ThumbnailedBOM.ViewModels
         async void ExecuteStart()
         {
             IsIdle = false;
-            token = cancellationTokenSource.Token;
+            cancellationTokenSource = new CancellationTokenSource();
             var modelDoc = AddInContext.SOLIDWORKS.ActiveDoc as ModelDoc2; 
             if (modelDoc != null)
             {
@@ -158,15 +190,13 @@ namespace ThumbnailedBOM.ViewModels
                                         tableBoundryConditions.HeaderPosition = swTableHeaderPosition_e.swTableHeader_Bottom;
                                     }
 
-                                    var processRet = await ProcessTableAsync(bomTableAnnotation, tableAnnotation, tableBoundryConditions, token);
+                                    var processRet = await ProcessTableAsync(bomTableAnnotation, tableAnnotation, tableBoundryConditions, cancellationTokenSource);
 
                                     if (processRet.Item1)
                                     {
-                                        //var dialogRet = System.Windows.Forms.MessageBox.Show("Export completed successfully? Would you like to open the excel spreadsheet?", "Question", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                                        //if (dialogRet == DialogResult.Yes)
-                                        //{
-                                            Process.Start(saveLocation);
-                                       // }
+                                        var dialogRet = System.Windows.Forms.MessageBox.Show("Would you like to open the export BOM?", AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                                        if (dialogRet == DialogResult.Yes)
+                                        Process.Start(saveLocation);
                                     }
                                     else
                                     {
@@ -194,27 +224,33 @@ namespace ThumbnailedBOM.ViewModels
             IsIdle = true;
         }
        
-        Tuple<bool,string> ProcessTable(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationToken token)
+        Tuple<bool,string> ProcessTable(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
         {
             try
             {
-                using (var p = new ExcelPackage(new FileInfo(SaveLocation)))
+                var bomFile = new FileInfo(SaveLocation);
+                if (bomFile.Exists)
                 {
-                    // create temporary folder to store images
-                    var path = Path.Combine(Path.GetTempPath(),"thumbnailedTempFolder");
-                    var tempDirectory = new DirectoryInfo(path);
-                    if (tempDirectory.Exists == false)
-                        tempDirectory.Create();
+                    SendMessageToUI($"Deleting {SaveLocation}...");
+                    bomFile.Delete();
+                }
+
+                using (var p = new ExcelPackage(bomFile))
+                {
+
 
                     int Height = 30;
                     int Width = 30;
-
+                    double ColWidth = 0;
                     //Get the Worksheet created in the previous codesample. 
                     var ws = p.Workbook.Worksheets.Add("BOM");
 
+
+                    
+
                     for (int i = tableCondition.StartIndex; i <= tableCondition.EndIndex; i++)
                     {
-                        if (token.IsCancellationRequested)
+                        if (source.Token.IsCancellationRequested)
                         {
                             p.Save();
                             return new Tuple<bool, string>(false, "Cancelled by user.");
@@ -225,17 +261,17 @@ namespace ThumbnailedBOM.ViewModels
 
                         string partNumber = string.Empty;
                         string itemNumber = string.Empty;
-                        if (bomTable.GetComponentsCount2(i, string.Empty, out itemNumber, out partNumber)> 0)
+                        if (bomTable.GetComponentsCount2(i, string.Empty, out itemNumber, out partNumber) > 0)
                         {
 
-                            var components = (object[])bomTable.GetComponents2(i,string.Empty);
+                            var components = (object[])bomTable.GetComponents2(i, string.Empty);
                             var swComponent = components.First() as Component2;
                             var modelDoc = swComponent.GetModelDoc2() as ModelDoc2;
                             if (modelDoc != null)
                             {
-                                
-                                var modelDocTitle = Path.GetFileNameWithoutExtension(modelDoc.GetTitle()); 
-                                SendMessageToUI($"{i}/{tableCondition.EndIndex} - Attempting to process {modelDocTitle}...");
+
+                                var modelDocTitle = Path.GetFileNameWithoutExtension(modelDoc.GetTitle());
+                                SendMessageToUI($"{i}/{tableCondition.EndIndex} - creating a thumbnail for{modelDocTitle}...");
                                 var referencedConfiguration = swComponent.ReferencedConfiguration;
                                 var configuration = modelDoc.GetActiveConfiguration() as Configuration;
                                 if (configuration != null)
@@ -244,23 +280,34 @@ namespace ThumbnailedBOM.ViewModels
                                     if (configurationName != referencedConfiguration)
                                         modelDoc.ShowConfiguration2(referencedConfiguration);
                                 }
-                                int er = 0; int wr = 0;
-                                modelDoc.ViewZoomtofit2();
-                                modelDoc.Visible = true;
-                                var rowThumbnailFilePath = Path.Combine(tempDirectory.FullName, "thumbnail.bmp");
-                                var saveRet = modelDoc.Extension.SaveAs(rowThumbnailFilePath, 0, 0, null, er, wr);
-                                if (saveRet)
+
+
+                                object dispatchImg = null;
+                                try
                                 {
-                                    
-                                    Image img = Image.FromFile(rowThumbnailFilePath);
-                                    ExcelPicture pic = ws.Drawings.AddPicture(i.ToString(), img);
-                                    pic.SetPosition(i+1, Width, 1, Height);
-                                    pic.SetSize(Height, Width);
+                                    DoSomethingInMainThread(() => 
+                                    {
+                                        dispatchImg = AddInContext.SOLIDWORKS.GetPreviewBitmap(modelDoc.GetPathName(), swComponent.ReferencedConfiguration);
+                                    });
+                                }
+                                catch (Exception e)
+                                {
+                                    Debug.Print(e.Message);
+                                }
+                               
+                                if (dispatchImg != null)
+                                {
+                                    ws.Row(i + 1).Height = ExcelHelper.PixelHeightToExcel(Height);
+                                    var bitmap = PictureHelper.Convert(dispatchImg);
+                                    var image = bitmap as Image;
+                                    ExcelPicture pic = ws.Drawings.AddPicture(i.ToString(), image);
+                                    pic.SetPosition(i, 0, 0, 0);
+                                    pic.SetSize(Height, (int)Width);
                                 }
                                 else
                                 {
-                                    ws.Row(i + 1).Height = Height;
-                                    ws.Cells[i+1, 1].Value = "N/A";
+                                    ws.Row(i + 1).Height = ExcelHelper.PixelHeightToExcel(Height);
+                                    ws.Cells[i + 1, 1].Value = "N/A";
                                 }
 
                                 for (int j = 0; j < table.ColumnCount - 1; j++)
@@ -271,18 +318,20 @@ namespace ThumbnailedBOM.ViewModels
                                     ws.Cells[i + 1, j + 2].Value = table.DisplayedText[i, j];
                                 }
 
-                                modelDoc.Visible = false; 
+                                modelDoc.Visible = false;
                             }
                             else
                             {
-                                ws.Row(i + 1).Height = Height;
-                                ws.Cells[i, 1].Value = "N/A";
+                                ws.Row(i + 1).Height = ExcelHelper.PixelHeightToExcel(Height);
+                                ws.Cells[i+1, 1].Value = "N/A";
                             }
                         }
                         else
                         {
-                            ws.Row(i+1).Height = Height;
+                            ws.Row(i + 1).Height = ExcelHelper.PixelHeightToExcel(Height);
                             ws.Cells[i + 1, 1].Value = "N/A";
+                            ws.Cells[i + 1, 2, i + 1, table.ColumnCount].Merge = true;
+                            ws.Cells[i + 1, 2, i + 1, table.ColumnCount].Value = "Failed To get row values. API Error.";
                         }
                        
                     }
@@ -295,6 +344,22 @@ namespace ThumbnailedBOM.ViewModels
                         ws.Cells[tableCondition.RowHeaderIndex+1, k + 2].Value = table.DisplayedText[tableCondition.RowHeaderIndex, k];
                         ws.Cells[tableCondition.RowHeaderIndex + 1, k + 2].Style.Font.Bold = true;
                     }
+
+                    ws.Cells[1,2, table.RowCount - 1,table.ColumnCount -1].AutoFitColumns();
+                    ws.Cells.Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Center;
+                    ws.Cells.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                  
+                    ColWidth = ExcelHelper.PixelWidthToExcel(30);
+                    ws.Column(1).Width = ColWidth;
+                    // add row headers
+                    for (int k = 0; k < table.ColumnCount; k++)
+                    {
+                        if (table.ColumnHidden[k])
+                            continue;
+                        ws.Row(k + 2).Height = ExcelHelper.PixelHeightToExcel(Height);
+                    }
+
                     //Save and close the package.
                     p.Save();
                 }
@@ -322,12 +387,22 @@ namespace ThumbnailedBOM.ViewModels
                 this.Message = message;
             });
         }
+        void DoSomethingInMainThread(Action action)
+        {
 
-        Task<Tuple<bool, string>> ProcessTableAsync(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationToken token)
+            window.Dispatcher.Invoke(() => {
+                action();
+            });
+        }
+
+        Task<Tuple<bool, string>> ProcessTableAsync(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
         {
             return Task<Tuple<bool, string>>.Run(() => {
 
-                return ProcessTable(bomTable, table, tableCondition, token);
+                AddInContext.SOLIDWORKS.CommandInProgress = true;
+var ret = ProcessTable(bomTable, table, tableCondition, source);
+                AddInContext.SOLIDWORKS.CommandInProgress = false;
+                return ret;
             });
         }
 
@@ -342,6 +417,40 @@ namespace ThumbnailedBOM.ViewModels
         #endregion 
     }
 
+    #region helper classes/structs
+    public class PictureHelper : System.Windows.Forms.AxHost
+    {
+
+        public PictureHelper()
+            : base("56174C86-1546-4778-8EE6-B6AC606875E7")
+        {
+
+        }
+
+        public static Image Convert(object objIDispImage)
+        {
+            Image objPicture = GetPictureFromIPicture(objIDispImage);
+            return objPicture;
+        }
+
+    }
+    #region excel help methods
+  public static class ExcelHelper
+    {
+          public static  double PixelWidthToExcel(int pixels)
+    {
+        var tempWidth = pixels * 0.14099;
+        var correction = (tempWidth / 100) * -1.30;
+
+        return tempWidth - correction;
+    }
+
+    public static double PixelHeightToExcel(int pixels)
+    {
+        return pixels * 0.75;
+    }
+    }
+    #endregion
     struct TableBoundryCondition
     {
         public swTableHeaderPosition_e HeaderPosition { get; set; }
@@ -350,4 +459,5 @@ namespace ThumbnailedBOM.ViewModels
 
         public int RowHeaderIndex { get; set; }
     }
+    #endregion
 }

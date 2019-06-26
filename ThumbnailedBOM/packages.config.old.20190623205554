@@ -4,7 +4,6 @@
   <package id="CommonServiceLocator" version="2.0.4" targetFramework="net452" />
   <package id="DryIoc.dll" version="3.0.2" targetFramework="net452" />
   <package id="EPPlus" version="4.5.3.2" targetFramework="net452" />
-  <package id="Microsoft.VisualStudio.SDK.EmbedInteropTypes" version="15.0.16" targetFramework="net452" />
   <package id="Prism.Core" version="7.1.0.431" targetFramework="net452" />
   <package id="Prism.DryIoc" version="7.1.0.431" targetFramework="net452" />
   <package id="Prism.Wpf" version="7.1.0.431" targetFramework="net452" />
