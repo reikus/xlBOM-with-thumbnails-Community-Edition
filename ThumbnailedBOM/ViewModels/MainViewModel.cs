@@ -26,13 +26,14 @@ namespace ThumbnailedBOM.ViewModels
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         private string message = "Set the save location to start...";
 
-        private Font font;
-        public Font Font
-        {
-            get { return font; }
-            set { SetProperty(ref font, value); }
-        }
+     
 
+        private WindowState windowState;
+        public WindowState WindowState
+        {
+            get { return windowState; }
+            set { SetProperty(ref windowState, value); }
+        }   
         public string Message
         {
            
@@ -144,6 +145,18 @@ namespace ThumbnailedBOM.ViewModels
         }
         async void ExecuteStart()
         {
+
+            if (string.IsNullOrWhiteSpace(SaveLocation))
+            { 
+                SetSaveLocation.Execute();
+                if (string.IsNullOrWhiteSpace(SaveLocation))
+                    return;
+            }
+
+
+
+
+
             IsIdle = false;
             cancellationTokenSource = new CancellationTokenSource();
             var modelDoc = AddInContext.SOLIDWORKS.ActiveDoc as ModelDoc2; 
@@ -166,9 +179,9 @@ namespace ThumbnailedBOM.ViewModels
                             if (selectionManager.GetSelectedObjectType3(i, -1) == (int)swSelectType_e.swSelANNOTATIONTABLES)
                             {
                                 found = true; 
-                                var tableAnnotation = selectionManager.GetSelectedObject6(i, -1) as TableAnnotation;
-                                BomTableAnnotation bomTableAnnotation;
-                                bomTableAnnotation = tableAnnotation as BomTableAnnotation;
+                                var tableAnnotation = selectionManager.GetSelectedObject6(i, -1) as ITableAnnotation;
+                                IBomTableAnnotation bomTableAnnotation;
+                                bomTableAnnotation = tableAnnotation as IBomTableAnnotation;
 
                                 TableBoundryCondition tableBoundryConditions = new TableBoundryCondition();
 
@@ -194,9 +207,13 @@ namespace ThumbnailedBOM.ViewModels
 
                                     if (processRet.Item1)
                                     {
-                                        var dialogRet = System.Windows.Forms.MessageBox.Show("Would you like to open the export BOM?", AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                                        var dialogRet = System.Windows.Forms.MessageBox.Show("Would you like to open the exported BOM?", AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                                         if (dialogRet == DialogResult.Yes)
-                                        Process.Start(saveLocation);
+
+                                            WindowState = WindowState.Minimized;
+                                            Process.Start(saveLocation);
+
+                                        Message = "Completed.";
                                     }
                                     else
                                     {
@@ -220,11 +237,10 @@ namespace ThumbnailedBOM.ViewModels
                     }
                 }
             }
-            Message = "Completed.";
             IsIdle = true;
         }
        
-        Tuple<bool,string> ProcessTable(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
+        Tuple<bool,string> ProcessTable(IBomTableAnnotation bomTable, ITableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
         {
             try
             {
@@ -261,17 +277,20 @@ namespace ThumbnailedBOM.ViewModels
 
                         string partNumber = string.Empty;
                         string itemNumber = string.Empty;
-                        if (bomTable.GetComponentsCount2(i, string.Empty, out itemNumber, out partNumber) > 0)
+
+                        var count = bomTable.GetComponentsCount(i);
+
+                        if (count > 0)
                         {
 
-                            var components = (object[])bomTable.GetComponents2(i, string.Empty);
+                            var components = (object[])bomTable.GetComponents(i);
                             var swComponent = components.First() as Component2;
                             var modelDoc = swComponent.GetModelDoc2() as ModelDoc2;
                             if (modelDoc != null)
                             {
 
                                 var modelDocTitle = Path.GetFileNameWithoutExtension(modelDoc.GetTitle());
-                                SendMessageToUI($"{i}/{tableCondition.EndIndex} - creating a thumbnail for{modelDocTitle}...");
+                                SendMessageToUI($"{i}/{tableCondition.EndIndex} - creating a thumbnail for {modelDocTitle}...");
                                 var referencedConfiguration = swComponent.ReferencedConfiguration;
                                 var configuration = modelDoc.GetActiveConfiguration() as Configuration;
                                 if (configuration != null)
@@ -395,24 +414,20 @@ namespace ThumbnailedBOM.ViewModels
             });
         }
 
-        Task<Tuple<bool, string>> ProcessTableAsync(BomTableAnnotation bomTable, TableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
+        Task<Tuple<bool, string>> ProcessTableAsync(IBomTableAnnotation bomTable, ITableAnnotation table, TableBoundryCondition tableCondition, CancellationTokenSource source)
         {
             return Task<Tuple<bool, string>>.Run(() => {
 
-                AddInContext.SOLIDWORKS.CommandInProgress = true;
+                
 var ret = ProcessTable(bomTable, table, tableCondition, source);
-                AddInContext.SOLIDWORKS.CommandInProgress = false;
+                 
                 return ret;
             });
         }
 
         bool CanExecuteStart()
         {
-            if (IsIdle == true)
-                if (string.IsNullOrWhiteSpace(SaveLocation) == false)
-                    return true;
-
-            return false;
+            return true; 
         }
         #endregion 
     }
