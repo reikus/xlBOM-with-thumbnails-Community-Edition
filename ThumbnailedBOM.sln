@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.28922.388
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThumbnailedBOM", "ThumbnailedBOM\ThumbnailedBOM.csproj", "{43D2065F-FEA6-452B-881E-78724C64C627}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "ThumbnailedBOM.Setup", "ThumbnailedBOM.Setup\ThumbnailedBOM.Setup.vdproj", "{D91C541C-D476-4BB0-A58D-B941DFE17CC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,8 @@ Global
 		{43D2065F-FEA6-452B-881E-78724C64C627}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{43D2065F-FEA6-452B-881E-78724C64C627}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{43D2065F-FEA6-452B-881E-78724C64C627}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D91C541C-D476-4BB0-A58D-B941DFE17CC9}.Debug|Any CPU.ActiveCfg = Debug
+		{D91C541C-D476-4BB0-A58D-B941DFE17CC9}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

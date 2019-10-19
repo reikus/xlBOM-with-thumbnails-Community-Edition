@@ -2,9 +2,12 @@
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SolidWorks.Interop.swpublished;
+using SolidWorksTools.File;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -135,8 +138,8 @@ namespace ThumbnailedBOM
 
 
         #region COM registration
-        internal static string AddInName { get; private set; } = "ThumbnailedBOM";
-        internal static string AddInDescription { get; private set; } = "Exports a SOLIDWORKS Bill of Materials to Excel with thumbail.";
+        internal static string AddInName { get; private set; } = "xlBOM with thumbnails";
+        internal static string AddInDescription { get; private set; } = "Exports a SOLIDWORKS Bill of Materials to Excel with thumbails. Developed by Amen Jlili";
         [ComRegisterFunction]
         private static void RegisterAssembly(Type t)
         {
@@ -147,6 +150,28 @@ namespace ThumbnailedBOM
                 rk.SetValue(null, 1); // 1: Add-in will load at start-up
                 rk.SetValue("Title", AddInName); // Title
                 rk.SetValue("Description", AddInDescription); // Description
+
+                #region Bitmap handling region
+                BitmapHandler iBmp = new BitmapHandler();
+
+                Assembly thisAssembly;
+
+                thisAssembly = System.Reflection.Assembly.GetExecutingAssembly();
+
+                var rm = new System.Resources.ResourceManager("ThumbnailedBOM.Properties.Resources", System.Reflection.Assembly.GetExecutingAssembly());
+                Bitmap add_in = (Bitmap)rm.GetObject("icon");
+
+                // Copy the bitmap to a suitable permanent location with a meaningful filename 
+
+                String addInPath = System.IO.Path.GetDirectoryName(thisAssembly.Location);
+                String iconPath = System.IO.Path.Combine(addInPath, "icon.png");
+                add_in.Save(iconPath);
+
+
+
+                #endregion
+                // Register the icon location 
+                rk.SetValue("Icon Path", iconPath);
             }
             catch (Exception e)
             {

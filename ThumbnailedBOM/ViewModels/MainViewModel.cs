@@ -63,14 +63,22 @@ namespace ThumbnailedBOM.ViewModels
         void ExecuteAbout()
         {
             var stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine("Exports SOLIDWORKS BOM to excel with thumbnails. Limitations:");
-            stringBuilder.AppendLine("- Works best on parts only BOM.");
+            stringBuilder.AppendLine("Exports SOLIDWORKS BOMs to Excel with thumbnails.");
+            stringBuilder.AppendLine("");
+            stringBuilder.AppendLine("Limitations:");
+            stringBuilder.AppendLine("");
+            stringBuilder.AppendLine("- Works best on parts-only BOM.");
             stringBuilder.AppendLine("- Thumbnails are not necessarily latest.");
-            stringBuilder.AppendLine("- Use default excel font / Does not propogate SOLIDWORKS BOM style.");
+            stringBuilder.AppendLine("- Use default Excel font / Does not propogate SOLIDWORKS BOM style.");
             stringBuilder.AppendLine("- Thumbnails are dimensioned at 30*30.");
             stringBuilder.AppendLine("Program licensed under MIT License.");
-            stringBuilder.AppendLine("Developed by Amen Jlili - https://github.com/jliliamen");
-            System.Windows.Forms.MessageBox.Show(stringBuilder.ToString(), AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            stringBuilder.AppendLine("");
+            stringBuilder.AppendLine("");
+            stringBuilder.AppendLine("Developed by Amen Jlili - jliliamen@gmail.com - https://github.com/jliliamen");
+            stringBuilder.AppendLine("");
+            stringBuilder.AppendLine("Addin icon designed by Dave Gandy - flaticon.com/authors/dave-gandy");
+
+            System.Windows.Forms.MessageBox.Show(stringBuilder.ToString(), AddInContext.AddInName, MessageBoxButtons.OK, MessageBoxIcon.Question);
         }
 
         bool CanExecuteAbout()
@@ -209,10 +217,10 @@ namespace ThumbnailedBOM.ViewModels
                                     {
                                         var dialogRet = System.Windows.Forms.MessageBox.Show("Would you like to open the exported BOM?", AddInContext.AddInName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                                         if (dialogRet == DialogResult.Yes)
-
+                                        {
                                             WindowState = WindowState.Minimized;
                                             Process.Start(saveLocation);
-
+                                        }
                                         Message = "Completed.";
                                     }
                                     else
