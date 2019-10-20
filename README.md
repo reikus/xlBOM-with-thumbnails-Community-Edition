@@ -1,6 +1,12 @@
 # xlBOM with thumbnails
 SOLIDWORKS add-in that exports Bill of Materials to Excel with thumbnails.
 
+# LinkedIn thread
+
+Join the LinkedIn discussion [here](https://www.linkedin.com/posts/jliliamen_solidworks-activity-6591332088224583680-B4Q0) .
+
+![Discussion](ThumbnailedBOM/Preview/discussion.png)
+
 # Preview
 ![Preview](ThumbnailedBOM/Preview/Preview.gif)
 
