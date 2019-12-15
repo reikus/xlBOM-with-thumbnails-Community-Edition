@@ -86,9 +86,9 @@ namespace ThumbnailedBOM.ViewModels
             return IsIdle;
         }
 
-        private DelegateCommand donate;
-        public DelegateCommand Donate =>
-            donate ?? (donate = new DelegateCommand(ExecuteDonate, CanExecuteDonate));
+        private DelegateCommand getPremium;
+        public DelegateCommand GetPremium =>
+            getPremium ?? (getPremium = new DelegateCommand(ExecuteGetPremium, CanExecuteGetPremium));
 
        
         private DelegateCommand cancel;
@@ -110,7 +110,7 @@ namespace ThumbnailedBOM.ViewModels
             Start.ObservesProperty(() => this.SaveLocation);
             Start.ObservesProperty(() => this.IsIdle);
             SetSaveLocation.ObservesProperty(() => this.IsIdle);
-            Donate.ObservesProperty(() => this.IsIdle);
+            GetPremium.ObservesProperty(() => this.IsIdle);
             Cancel.ObservesProperty(() => this.IsIdle);
             About.ObservesProperty(() => this.IsIdle);
         }
@@ -131,12 +131,12 @@ namespace ThumbnailedBOM.ViewModels
         {
             return IsIdle;
         }
-        void ExecuteDonate()
+        void ExecuteGetPremium()
         {
-            Process.Start("https://www.paypal.me/AmenAllahJLILI");
+            Process.Start("https://bluebyte.biz/product/xlbom-with-thumbnails/");
         }
 
-        bool CanExecuteDonate()
+        bool CanExecuteGetPremium()
         {
             return IsIdle;
         }

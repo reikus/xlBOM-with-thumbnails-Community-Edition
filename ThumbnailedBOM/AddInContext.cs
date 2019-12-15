@@ -57,13 +57,13 @@ namespace ThumbnailedBOM
  
              
             var ret = SOLIDWORKS.AddMenuPopupItem3(
-              (int)(swDocumentTypes_e.swDocDRAWING | swDocumentTypes_e.swDocASSEMBLY),
+              (int)(swDocumentTypes_e.swDocDRAWING),
               SessionCookie,
               (int)swSelectType_e.swSelANNOTATIONTABLES,
-              "Export to Excel (with thumbnails)",
+              "Export to Excel (with thumbnails) - Community edition",
               "OpenShell",
               "",
-              "Export to Excel (with thumbnails)",
+              "Export to Excel (with thumbnails) - Community edition",
               ""
               );
             if (ret != -1)
@@ -138,8 +138,8 @@ namespace ThumbnailedBOM
 
 
         #region COM registration
-        internal static string AddInName { get; private set; } = "xlBOM with thumbnails";
-        internal static string AddInDescription { get; private set; } = "Exports a SOLIDWORKS Bill of Materials to Excel with thumbails. Developed by Amen Jlili";
+        internal static string AddInName { get; private set; } = "xlBOM with thumbnails Community";
+        internal static string AddInDescription { get; private set; } = "Exports a SOLIDWORKS Bill of Materials to Excel with thumbails.";
         [ComRegisterFunction]
         private static void RegisterAssembly(Type t)
         {
