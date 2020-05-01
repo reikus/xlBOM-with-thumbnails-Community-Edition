@@ -1,3 +1,6 @@
+# xlBOM with thumbnails Premium
+A premium edition of the addin exists!. Check it out [here](https://bluebyte.biz/product/xlbom-with-thumbnails/) .
+
 # xlBOM with thumbnails
 SOLIDWORKS add-in that exports Bill of Materials to Excel with thumbnails.
 
